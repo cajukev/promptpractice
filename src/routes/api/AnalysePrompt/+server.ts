@@ -33,46 +33,32 @@ export const POST: RequestHandler = async ({ request }) => {
                 `Separate the users text in terms of the 6 building blocks
 Task: The main action you want to be executed. Includes verb or action word. ex: write an x, summarize this y. Single or multiple
 Persona: The character you want the model to assume. ex: anime villain, 5 year old. Single or multiple
-Format: The visual layout or presentation or medium of the desired output. ex: email, monologue, report, article, use tables. Single or multiple
+Format: The type of text / presentation / medium of the user's desired output. Often substring of task. ex: email, monologue, report, article, use tables. Single or multiple
 Tone: The tone or mood in which the response should be delivered. ex: 'use a formal and friendly tone', 'use suggestive language' Single or multiple
 Exemplars: Specific elements the user wants to include. Can include verbs. Single or multiple
 Context: Informational Context about the task - often substring of task in shorter prompts. Single or multiple
+
+Must be exact quotes from the user prompt
 Blocks can appear in any order
 Return each block as an array of phrases 
-If there are many correct answers and they are not in the same phrase, return multiple strings
-Only return exact strings that are part of the original user prompt as-is despite errors or not making sense as a standalone phrase
+If there are many correct answers and they are not in the same phrase, return multiple quotes
+Only return exact quotes that are part of the original user prompt as-is despite errors or not making sense as a standalone phrase
 There may be overlap between blocks 
-If the building block is missing, return an empty string
+If the building block is missing, return an empty string. 
+Every part of the prompt should be returned in one of the 6 building blocks.
 
 E:
-''You are a senior product marketing manager at Apple and you have just unveiled the latest Apple product in collaboration with Tesla, the Apple car, and received 12,000 pre-orders which is 200% higher than target. Write an email to your boss, Tim Cook, sharing this positive news. The email should include a TLDR (too long; didn't read) section and end with a section thanking the product and engineering teams. Use clear and concise language and write in a confident yet friendly tone. The email should have at least 2 tables and 5 bullet points. Return only valid markdown.
-Task - Write an email to your boss, Tim Cook, sharing this positive news
-Persona - You are a senior product marketing manager at Apple
+''You, as senior product marketing manager at Apple have just unveiled the latest Apple product in collaboration with Tesla, the Apple car, and received 12,000 pre-orders which is 200% higher than target. Write an email to your boss, Tim Cook, sharing this positive news. The email should include a TLDR (too long; didn't read) section and end with a section thanking the product and engineering teams. Use clear and concise language and write in a confident yet friendly tone. The email should have at least 2 tables and 5 bullet points. Return only valid markdown.
+Task - Write an email to your boss
+Persona - as senior product marketing manager at Apple
 Format - [email, Return only valid markdown] // (as an array of strings)
 Tone - Use clear and concise language and write in a confident yet friendly tone
-Exemplars - The email should include a TLDR (too long; didn't read) section and end with a section thanking the product and engineering teams''
-Context - and you have just unveiled the latest Apple product in collaboration with Tesla, the Apple car, and received 12,000 pre-orders which is 200% higher than target''
+Exemplars - [sharing this positive news, The email should include a TLDR (too long; didn't read) section and end with a section thanking the product and engineering teams]
+Context - ['Tim Cook', 'have just unveiled the latest Apple product in collaboration with Tesla, the Apple car, and received 12,000 pre-orders which is 200% higher than target'] ''
 
-E: 
-''As a soldier writing home, draft a heartfelt letter expressing longing and hope in a way that conveys both strength and vulnerability.
-Task - draft a heartfelt letter
-Persona - As a soldier writing home
-Tone - [heartfelt,in a way that conveys both strength and vulnerability]
-Format - letter
-Exemplars - ''
-Context - expressing longing and hope in a way that conveys both strength and vulnerability
-
-E:
-''Write a love song about a soldier coming home from the war.
-Task - Write a love song 
-Persona -
-Tone -
-Format - love song
-Exemplars - ''
-Context - about a soldier coming home from the war''
 `
             ),
-            HumanMessagePromptTemplate.fromTemplate("{inputText}"),
+            HumanMessagePromptTemplate.fromTemplate("User prompt: (only copy as-is) {inputText}"),
         ],
         inputVariables: ["inputText"],
     });

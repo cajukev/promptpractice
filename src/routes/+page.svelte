@@ -1,5 +1,40 @@
 <script lang="ts">
-	let emptyPrompt = {
+	import { each } from 'svelte/internal';
+	import { objectUtil } from 'zod';
+
+	interface Suggestions {
+		task: { name: string; checked: boolean }[];
+		persona: { name: string; checked: boolean }[];
+		format: { name: string; checked: boolean }[];
+		tone: { name: string; checked: boolean }[];
+		exemplars: { name: string; checked: boolean }[];
+		context: { name: string; checked: boolean }[];
+		[key: string]: any;
+	}
+
+	interface Prompt {
+		task: string[];
+		persona: string[];
+		format: string[];
+		tone: string[];
+		exemplars: string[];
+		context: string[];
+		[key: string]: any;
+	}
+
+	interface MissingBlocks {
+		task: boolean;
+		persona: boolean;
+		format: boolean;
+		tone: boolean;
+		exemplars: boolean;
+		context: boolean;
+		[key: string]: any;
+	}
+
+	let sixBlocks = ['task', 'persona', 'format', 'tone', 'exemplars', 'context'];
+
+	let emptyPrompt: Prompt = {
 		task: [],
 		persona: [],
 		format: [],
@@ -8,13 +43,31 @@
 		context: []
 	};
 
-	let missingBlocks = {
+	let missingBlocks: MissingBlocks = {
 		task: false,
 		persona: false,
 		format: false,
 		tone: false,
 		exemplars: false,
 		context: false
+	};
+
+	let improvementsChecked: MissingBlocks = {
+		task: false,
+		persona: false,
+		format: false,
+		tone: false,
+		exemplars: false,
+		context: false
+	};
+
+	let improvements: Suggestions = {
+		task: [],
+		persona: [],
+		format: [],
+		tone: [],
+		exemplars: [],
+		context: []
 	};
 
 	$: console.log(missingBlocks);
@@ -25,14 +78,7 @@
 		loadingAnalyze = true;
 		analysedPrompt = emptyPrompt;
 		analyzedInput = '';
-		missingBlocks = {
-			task: false,
-			persona: false,
-			format: false,
-			tone: false,
-			exemplars: false,
-			context: false
-		};
+
 		suggestions = {
 			task: [],
 			persona: [],
@@ -65,27 +111,13 @@
 			});
 	};
 
-	let transformInput = (prompt: {
-		task: string[];
-		format: string[];
-		persona: string[];
-		tone: string[];
-		exemplars: string[];
-		context: string[];
-	}) => {
-		// Go over input string and add html tags , span with class for each part of the prompt
-		console.log('transformInput', prompt);
-		let array = [
-			{ name: 'task', value: prompt.task },
-			{ name: 'format', value: prompt.format },
-			{ name: 'persona', value: prompt.persona },
-			{ name: 'tone', value: prompt.tone },
-			{ name: 'exemplars', value: prompt.exemplars },
-			{ name: 'context', value: prompt.context }
-		];
+	let transformInput = (prompt: Prompt) => {
+		let array = sixBlocks.map((type) => {
+			return { name: type, value: prompt[type] };
+		});
 		analyzedInput = input;
 		array.forEach((element) => {
-			element.value.forEach((value) => {
+			element.value.forEach((value: string) => {
 				if (value.length !== 0 && analyzedInput.toLowerCase().includes(value.toLowerCase())) {
 					let index = getLocationOfIncludes(analyzedInput, value);
 					let length = value.length;
@@ -106,7 +138,7 @@
 	};
 
 	let input = '';
-	let analysedPrompt = {
+	let analysedPrompt: Prompt = {
 		task: [],
 		persona: [],
 		format: [],
@@ -116,14 +148,7 @@
 	};
 
 	let loadingSuggest = false;
-	let suggestions: {
-		task: { name: string; checked: boolean }[];
-		persona: { name: string; checked: boolean }[];
-		format: { name: string; checked: boolean }[];
-		tone: { name: string; checked: boolean }[];
-		exemplars: { name: string; checked: boolean }[];
-		context: { name: string; checked: boolean }[];
-	} = {
+	let suggestions: Suggestions = {
 		task: [],
 		persona: [],
 		format: [],
@@ -150,44 +175,14 @@
 			.then((res) => res.json())
 			.then((data) => {
 				console.log(data.prompt);
-				let prompt: {
-					task?: string[];
-					format?: string[];
-					persona?: string[];
-					tone?: string[];
-					exemplars?: string[];
-					context?: string[];
-				} = data.prompt;
-				if (prompt.task) {
-					prompt.task?.forEach((task) => {
-						suggestions.task.push({ name: task, checked: false });
-					});
-				}
-				if (prompt.format) {
-					prompt.format?.forEach((format) => {
-						suggestions.format.push({ name: format, checked: false });
-					});
-				}
-				if (prompt.persona) {
-					prompt.persona?.forEach((persona) => {
-						suggestions.persona.push({ name: persona, checked: false });
-					});
-				}
-				if (prompt.tone) {
-					prompt.tone?.forEach((tone) => {
-						suggestions.tone.push({ name: tone, checked: false });
-					});
-				}
-				if (prompt.exemplars) {
-					prompt.exemplars?.forEach((exemplars) => {
-						suggestions.exemplars.push({ name: exemplars, checked: false });
-					});
-				}
-				if (prompt.context) {
-					prompt.context?.forEach((context) => {
-						suggestions.context.push({ name: context, checked: false });
-					});
-				}
+				let prompt: Prompt = data.prompt;
+				sixBlocks.forEach((type) => {
+					if (prompt[type]) {
+						prompt[type]?.forEach((block: string) => {
+							suggestions[type].push({ name: block, checked: false });
+						});
+					}
+				});
 				loadingSuggest = false;
 				suggestions = { ...suggestions };
 			})
@@ -197,7 +192,10 @@
 			});
 	};
 	let revisedPrompt = '';
+	let loadingRevise = false;
 	let revise = () => {
+		if (loadingRevise) return;
+		loadingRevise = true;
 		fetch('/api/RevisePrompt', {
 			method: 'POST',
 			headers: {
@@ -206,16 +204,55 @@
 			body: JSON.stringify({
 				prompt: input,
 				analysedPrompt: analysedPrompt,
-				suggestions: suggestions
+				suggestions: suggestions,
+				improvements: improvements
 			})
 		})
 			.then((res) => res.json())
 			.then((data) => {
 				console.log(data);
 				revisedPrompt = data.text;
+				loadingRevise = false;
 			})
 			.catch((err) => {
 				console.log(err);
+				loadingRevise = false;
+			});
+	};
+
+	let loadingImprove = false;
+	let improve = () => {
+		if (loadingImprove) return;
+		loadingImprove = true;
+		console.log('Improving...');
+		fetch('/api/ImprovePrompt', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				prompt: input,
+				analysedPrompt: analysedPrompt,
+				missingBlocks: improvementsChecked
+			})
+		})
+			.then((res) => res.json())
+			.then((data) => {
+				console.log(data.prompt);
+				let prompt: Prompt = data.prompt;
+				sixBlocks.forEach((type) => {
+					if (prompt[type]) {
+						prompt[type]?.forEach((block: string) => {
+							improvements[type].push({ name: block, checked: false });
+						});
+					}
+				});
+				loadingImprove = false;
+				improvements = { ...improvements };
+			})
+			.catch((err) => {
+				console.log(err);
+				loadingImprove = false;
 			});
 	};
 
@@ -247,236 +284,131 @@
 			<div>
 				<h2>Analysis</h2>
 				<ul>
-					<li>
-						{#if analysedPrompt.task.length !== 0}
-							<b><span class="task">Task</span></b> - {analysedPrompt.task || 'No task found'}
-						{/if}
-					</li>
-					<li>
-						{#if analysedPrompt.persona.length !== 0}
-							<b><span class="persona">Persona</span></b> - {analysedPrompt.persona ||
-								'No persona found'}
-						{/if}
-					</li>
-					<li>
-						{#if analysedPrompt.format.length !== 0}
-							<b><span class="format">Format</span></b> - {analysedPrompt.format ||
-								'No format found'}
-						{/if}
-					</li>
-					<li>
-						{#if analysedPrompt.tone.length !== 0}
-							<b><span class="tone">Tone</span></b> - {analysedPrompt.tone || 'No tone found'}
-						{/if}
-					</li>
-					<li>
-						{#if analysedPrompt.exemplars.length !== 0}
-							<b><span class="exemplars">Exemplars</span></b> - {analysedPrompt.exemplars ||
-								'No exemplars found'}
-						{/if}
-					</li>
-					<li>
-						{#if analysedPrompt.context.length !== 0}
-							<b><span class="context">Context</span></b> - {analysedPrompt.context ||
-								'No context found'}
-						{/if}
-					</li>
+					{#each sixBlocks as type}
+						<li>
+							{#if analysedPrompt[type].length !== 0}
+								<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b> - {analysedPrompt[
+									type
+								] || 'No' + type + 'found'}
+							{/if}
+						</li>
+					{/each}
 				</ul>
 			</div>
 
-			<div>
-				<h2>Missing</h2>
+			<div class="space-y-5">
 				<!-- Help sections -->
 				{#if analyzedInput !== ''}
-					<!-- No Task -->
-					{#if analysedPrompt.task.length === 0}
-						<div class="flex flex-col items-center">
-							<h2>No Task</h2>
-							<div class="flex">
-								<input bind:checked={missingBlocks.task} type="checkbox" id="task" name="task" />
-								<label for="task">Suggest</label>
+					<!-- Missing section -->
+					{#if sixBlocks.some((type) => analysedPrompt[type].length === 0)}
+						<h2>Missing</h2>
+						{#each sixBlocks as type}
+							{#if analysedPrompt[type].length === 0}
+								<div class="flex flex-col items-center">
+									<div class="flex">
+										<input
+											bind:checked={missingBlocks[type]}
+											type="checkbox"
+											id={type}
+											name={type}
+										/>
+										<label class="ml-2" for={type}>Suggest {type}</label>
+									</div>
+								</div>
+							{/if}
+						{/each}
+						<button
+							class="border btn rounded-full"
+							on:click={() => {
+								suggest();
+							}}>suggest</button
+						>
+						{#if loadingSuggest}
+							<p>Suggesting...</p>
+						{/if}
+						{#if suggestions.task.length !== 0 || suggestions.persona.length !== 0 || suggestions.format.length !== 0 || suggestions.tone.length !== 0 || suggestions.exemplars.length !== 0 || suggestions.context.length !== 0}
+							<h2>Suggestions</h2>
+							<div>
+								{#each sixBlocks as type}
+									{#if suggestions[type] !== undefined && suggestions[type].length !== 0}
+										<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b>
+										{#each suggestions[type] as suggestion, i}
+											<div class="flex items-center">
+												<input
+													type="checkbox"
+													id={suggestion.name + i + ''}
+													name={suggestion.name + i + ''}
+													bind:checked={suggestions[type][i].checked}
+												/>
+												<label for={suggestion.name + i + ''}>{suggestion.name}</label>
+											</div>
+										{/each}
+									{/if}
+								{/each}
 							</div>
-						</div>
+						{/if}
 					{/if}
-					<!-- No Persona -->
-					{#if analysedPrompt.persona.length === 0}
-						<div class="flex flex-col items-center">
-							<h2>No Persona</h2>
-							<div class="flex">
-								<input
-									bind:checked={missingBlocks.persona}
-									type="checkbox"
-									id="persona"
-									name="persona"
-								/>
-								<label for="persona">Suggest</label>
+
+					<!-- Improve section - Opposite of Missing  -->
+					<h2>Improve</h2>
+					{#each sixBlocks as type}
+						{#if analysedPrompt[type].length !== 0}
+							<div class="flex flex-col items-center">
+								<div class="flex">
+									<input
+										bind:checked={improvementsChecked[type]}
+										type="checkbox"
+										id={type}
+										name={type}
+									/>
+									<label class="ml-2" for={type}>Improve {type}</label>
+								</div>
 							</div>
-						</div>
-					{/if}
-					<!-- No Format -->
-					{#if analysedPrompt.format.length === 0}
-						<div class="flex flex-col items-center">
-							<h2>No Format</h2>
-							<div class="flex">
-								<input
-									bind:checked={missingBlocks.format}
-									type="checkbox"
-									id="format"
-									name="format"
-								/>
-								<label for="format">Suggest</label>
-							</div>
-						</div>
-					{/if}
-					<!-- No Tone -->
-					{#if analysedPrompt.tone.length === 0}
-						<div class="flex flex-col items-center">
-							<h2>No Tone</h2>
-							<div class="flex">
-								<input bind:checked={missingBlocks.tone} type="checkbox" id="tone" name="tone" />
-								<label for="tone">Suggest</label>
-							</div>
-						</div>
-					{/if}
-					<!-- No Exemplars -->
-					{#if analysedPrompt.exemplars.length === 0}
-						<div class="flex flex-col items-center">
-							<h2>No Exemplars</h2>
-							<div class="flex">
-								<input
-									bind:checked={missingBlocks.exemplars}
-									type="checkbox"
-									id="exemplars"
-									name="exemplars"
-									class="inline"
-								/>
-								<label for="exemplars" class="inline">Suggest</label>
-							</div>
-						</div>
-					{/if}
-					<!-- No Context -->
-					{#if analysedPrompt.context.length === 0}
-						<div class="flex flex-col items-center">
-							<h2>No Context</h2>
-							<div class="flex">
-								<input
-									bind:checked={missingBlocks.context}
-									type="checkbox"
-									id="context"
-									name="context"
-								/>
-								<label for="context">Suggest</label>
-							</div>
-						</div>
-					{/if}
+						{/if}
+					{/each}
 					<button
 						class="border btn rounded-full"
 						on:click={() => {
-							suggest();
-						}}>suggest</button
+							improve();
+						}}>improve</button
 					>
+					{#if loadingImprove}
+						Loading Improvements...
+					{/if}
+
+					{#if sixBlocks.some((type) => improvements[type].length !== 0)}
+						<h2>Improvements</h2>
+						<div>
+							{#each sixBlocks as type}
+								{#if improvements[type] !== undefined && improvements[type].length !== 0}
+									<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b>
+									{#each improvements[type] as improvement, i}
+										<div class="flex items-center">
+											<input
+												type="checkbox"
+												id={improvement.name + i + ''}
+												name={improvement.name + i + ''}
+												bind:checked={improvements[type][i].checked}
+											/>
+											<label for={improvement.name + i + ''}>{improvement.name}</label>
+										</div>
+									{/each}
+								{/if}
+							{/each}
+						</div>
+
+						{#if sixBlocks.some((type) => analysedPrompt[type].length !== 0 || improvements[type].length !== 0)}
+							<button
+								class="btn border rounded-full mt-2"
+								on:click={() => {
+									revise();
+								}}>Revise Prompt</button
+							>
+						{/if}
+					{/if}
 				{/if}
 			</div>
-			{#if loadingSuggest}
-			<p>Suggesting...</p>
-			{/if}
-			{#if suggestions.task.length !== 0 || suggestions.persona.length !== 0 || suggestions.format.length !== 0 || suggestions.tone.length !== 0 || suggestions.exemplars.length !== 0 || suggestions.context.length !== 0}
-			<h2>Suggestions</h2>
-				<div>
-					<!-- Suggestions -->
-					{#if suggestions.task !== undefined && suggestions.task.length !== 0}
-						<h2>Suggestions</h2>
-						<b><span class="task">Task</span></b>
-						{#each suggestions.task as task, i}
-							<div class="flex items-center">
-								<input
-									type="checkbox"
-									id={task.name + i + ''}
-									name={task.name + i + ''}
-									bind:checked={suggestions.task[i].checked}
-								/>
-								<label for={task.name + i + ''}>{task.name}</label>
-							</div>
-						{/each}
-					{/if}
-					{#if suggestions.persona !== undefined && suggestions.persona.length !== 0}
-						<b><span class="persona">Persona</span></b>
-						{#each suggestions.persona as persona, i}
-							<div class="flex items-center">
-								<input
-									type="checkbox"
-									id={persona.name + i + ''}
-									name={persona.name + i + ''}
-									bind:checked={suggestions.persona[i].checked}
-								/>
-								<label for={persona.name + i + ''}>{persona.name}</label>
-							</div>
-						{/each}
-					{/if}
-					{#if suggestions.format !== undefined && suggestions.format.length !== 0}
-						<b><span class="format">Format</span></b>
-						{#each suggestions.format as format, i}
-							<div class="flex items-center">
-								<input
-									type="checkbox"
-									id={format.name + i + ''}
-									name={format.name + i + ''}
-									bind:checked={suggestions.format[i].checked}
-								/>
-								<label for={format.name + i + ''}>{format.name}</label>
-							</div>
-						{/each}
-					{/if}
-					{#if suggestions.tone !== undefined && suggestions.tone.length !== 0}
-						<b><span class="tone">Tone</span></b>
-						{#each suggestions.tone as tone, i}
-							<div class="flex items-center">
-								<input
-									type="checkbox"
-									id={tone.name + i + ''}
-									name={tone.name + i + ''}
-									bind:checked={suggestions.tone[i].checked}
-								/>
-								<label for={tone.name + i + ''}>{tone.name}</label>
-							</div>
-						{/each}
-					{/if}
-					{#if suggestions.exemplars !== undefined && suggestions.exemplars.length !== 0}
-						<b><span class="exemplars">Exemplars</span></b>
-						{#each suggestions.exemplars as exemplars, i}
-							<div class="flex items-center">
-								<input
-									type="checkbox"
-									id={exemplars.name + i + ''}
-									name={exemplars.name + i + ''}
-									bind:checked={suggestions.exemplars[i].checked}
-								/>
-								<label for={exemplars.name + i + ''}>{exemplars.name}</label>
-							</div>
-						{/each}
-					{/if}
-					{#if suggestions.context !== undefined && suggestions.context.length !== 0}
-						<b><span class="context">Context</span></b>
-						{#each suggestions.context as context, i}
-							<div class="flex items-center">
-								<input
-									type="checkbox"
-									id={context.name + i + ''}
-									name={context.name + i + ''}
-									bind:checked={suggestions.context[i].checked}
-								/>
-								<label for={context.name + i + ''}>{context.name}</label>
-							</div>
-						{/each}
-					{/if}
-				</div>
-				<button
-					class="btn border rounded-full mt-2"
-					on:click={() => {
-						revise();
-					}}>Revise Prompt</button
-				>
-			{/if}
+
 			{#if revisedPrompt !== ''}
 				<h2>Revised Prompt</h2>
 				<h3>{revisedPrompt}</h3>

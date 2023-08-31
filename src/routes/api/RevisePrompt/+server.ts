@@ -9,32 +9,8 @@ import {
 
 export const POST: RequestHandler = async ({ request }) => {
     let body = await request.json();
-    let suggestions: {
-        task: {
-            name: string;
-            checked: boolean;
-        }[];
-        persona: {
-            name: string;
-            checked: boolean;
-        }[];
-        format: {
-            name: string;
-            checked: boolean;
-        }[];
-        tone: {
-            name: string;
-            checked: boolean;
-        }[];
-        exemplars: {
-            name: string;
-            checked: boolean;
-        }[];
-        context: {
-            name: string;
-            checked: boolean;
-        }[];
-    } = body.suggestions;
+    let suggestions: Suggestions = body.suggestions;
+    let improvements: Suggestions = body.improvements;
 
     // Create a string that represents the suggestions, only keep those that are checked
     let suggestionsString = "";
@@ -48,7 +24,19 @@ export const POST: RequestHandler = async ({ request }) => {
             suggestionsString += "\n";
         }
     });
-  
+
+    // Create a string that represents the improvements, only keep those that are checked
+    let improvementsString = "";
+    Object.keys(improvements).forEach((improvement) => {
+        if ((improvements as Record<string, any>)[improvement].filter((s: { checked: boolean; }) => s.checked).length > 0) {
+            improvementsString += `${improvement}: `;
+            improvementsString += (improvements as Record<string, any>)[improvement]
+                .filter((s: { checked: boolean; }) => s.checked)
+                .map((s: { name: string; }) => s.name)
+                .join(", ");
+            improvementsString += "\n";
+        }
+    });
     
     const prompt = new ChatPromptTemplate({
         promptMessages: [
@@ -67,6 +55,7 @@ Return only a new prompt that will then be used as an input.`
 Original Prompt: ${body.prompt}
 Analysis: ${body.analyzedPrompt}
 Suggestions: ${suggestionsString}
+Improvements: ${improvementsString}
 Revised Prompt:`),
         ],
         inputVariables: ["inputText"],
