@@ -293,116 +293,126 @@
 				</ul>
 			</div>
 
-			<div class="space-y-5">
+			<div class="space-y-5 flex">
 				<!-- Help sections -->
 				{#if analyzedInput !== ''}
 					<!-- Missing section -->
-					{#if sixBlocks.some((type) => analysedPrompt[type].length === 0)}
-						<h2>Missing</h2>
-						{#each sixBlocks as type}
-							{#if analysedPrompt[type].length === 0}
-								<div class="flex flex-col items-center">
-									<div class="flex">
-										<input
-											bind:checked={missingBlocks[type]}
-											type="checkbox"
-											id={type}
-											name={type}
-										/>
-										<label class="ml-2" for={type}>Suggest {type}</label>
-									</div>
-								</div>
-							{/if}
-						{/each}
-						<button
-							class="border btn rounded-full"
-							on:click={() => {
-								suggest();
-							}}>suggest</button
-						>
-						{#if loadingSuggest}
-							<p>Suggesting...</p>
-						{/if}
-						{#if suggestions.task.length !== 0 || suggestions.persona.length !== 0 || suggestions.format.length !== 0 || suggestions.tone.length !== 0 || suggestions.exemplars.length !== 0 || suggestions.context.length !== 0}
-							<h2>Suggestions</h2>
-							<div class="flex flex-col items-center">
-								{#each sixBlocks as type}
-									{#if suggestions[type] !== undefined && suggestions[type].length !== 0}
-										<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b>
-										{#each suggestions[type] as suggestion, i}
-											<div class="flex items-center">
-												<input
-													type="checkbox"
-													id={suggestion.name + i + ''}
-													name={suggestion.name + i + ''}
-													bind:checked={suggestions[type][i].checked}
-												/>
-												<label class="ml-2" for={suggestion.name + i + ''}>{suggestion.name}</label>
-											</div>
-										{/each}
-									{/if}
-								{/each}
-							</div>
-						{/if}
-					{/if}
-
-					<!-- Improve section - Opposite of Missing  -->
-					<h2>Improve</h2>
-					{#each sixBlocks as type}
-						{#if analysedPrompt[type].length !== 0}
-							<div class="flex flex-col items-center">
-								<div class="flex">
-									<input
-										bind:checked={improvementsChecked[type]}
-										type="checkbox"
-										id={type}
-										name={type}
-									/>
-									<label class="ml-2" for={type}>Improve {type}</label>
-								</div>
-							</div>
-						{/if}
-					{/each}
-					<button
-						class="border btn rounded-full"
-						on:click={() => {
-							improve();
-						}}>improve</button
-					>
-					{#if loadingImprove}
-						Loading Improvements...
-					{/if}
-
-					{#if sixBlocks.some((type) => improvements[type].length !== 0)}
-						<h2>Improvements</h2>
-						<div>
+					<div>
+						{#if sixBlocks.some((type) => analysedPrompt[type].length === 0)}
+							<h2>Missing</h2>
 							{#each sixBlocks as type}
-								{#if improvements[type] !== undefined && improvements[type].length !== 0}
-									<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b>
-									{#each improvements[type] as improvement, i}
-										<div class="flex items-center">
+								{#if analysedPrompt[type].length === 0}
+									<div class="flex flex-col items-center">
+										<div class="flex">
 											<input
+												bind:checked={missingBlocks[type]}
 												type="checkbox"
-												id={improvement.name + i + ''}
-												name={improvement.name + i + ''}
-												bind:checked={improvements[type][i].checked}
+												id={type}
+												name={type}
 											/>
-											<label for={improvement.name + i + ''}>{improvement.name}</label>
+											<label class="ml-2" for={type}>Suggest {type}</label>
 										</div>
-									{/each}
+									</div>
 								{/if}
 							{/each}
-						</div>
-
-						{#if sixBlocks.some((type) => analysedPrompt[type].length !== 0 || improvements[type].length !== 0)}
 							<button
-								class="btn border rounded-full mt-2"
+								class="border btn rounded-full"
 								on:click={() => {
-									revise();
-								}}>Revise Prompt</button
+									suggest();
+								}}>suggest</button
 							>
+							{#if loadingSuggest}
+								<p>Suggesting...</p>
+							{/if}
+							{#if suggestions.task.length !== 0 || suggestions.persona.length !== 0 || suggestions.format.length !== 0 || suggestions.tone.length !== 0 || suggestions.exemplars.length !== 0 || suggestions.context.length !== 0}
+								<h2>Suggestions</h2>
+								<div class="flex flex-col items-center">
+									{#each sixBlocks as type}
+										{#if suggestions[type] !== undefined && suggestions[type].length !== 0}
+											<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b
+											>
+											{#each suggestions[type] as suggestion, i}
+												<div class="flex items-center">
+													<input
+														type="checkbox"
+														id={suggestion.name + i + ''}
+														name={suggestion.name + i + ''}
+														bind:checked={suggestions[type][i].checked}
+													/>
+													<label class="ml-2" for={suggestion.name + i + ''}
+														>{suggestion.name}</label
+													>
+												</div>
+											{/each}
+										{/if}
+									{/each}
+								</div>
+							{/if}
 						{/if}
-					{/if}
+					</div>
+
+					<div>
+						<!-- Improve section - Opposite of Missing  -->
+						{#if sixBlocks.some((type) => analysedPrompt[type].length !== 0)}
+							<h2>Improve</h2>
+							{#each sixBlocks as type}
+								{#if analysedPrompt[type].length !== 0}
+									<div class="flex flex-col items-center">
+										<div class="flex">
+											<input
+												bind:checked={improvementsChecked[type]}
+												type="checkbox"
+												id={type}
+												name={type}
+											/>
+											<label class="ml-2" for={type}>Improve {type}</label>
+										</div>
+									</div>
+								{/if}
+							{/each}
+							<button
+								class="border btn rounded-full"
+								on:click={() => {
+									improve();
+								}}>improve</button
+							>
+							{#if loadingImprove}
+								Loading Improvements...
+							{/if}
+
+							{#if sixBlocks.some((type) => improvements[type].length !== 0)}
+								<h2>Improvements</h2>
+								<div>
+									{#each sixBlocks as type}
+										{#if improvements[type] !== undefined && improvements[type].length !== 0}
+											<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b
+											>
+											{#each improvements[type] as improvement, i}
+												<div class="flex items-center">
+													<input
+														type="checkbox"
+														id={improvement.name + i + ''}
+														name={improvement.name + i + ''}
+														bind:checked={improvements[type][i].checked}
+													/>
+													<label for={improvement.name + i + ''}>{improvement.name}</label>
+												</div>
+											{/each}
+										{/if}
+									{/each}
+								</div>
+
+								{#if sixBlocks.some((type) => analysedPrompt[type].length !== 0 || improvements[type].length !== 0)}
+									<button
+										class="btn border rounded-full mt-2"
+										on:click={() => {
+											revise();
+										}}>Revise Prompt</button
+									>
+								{/if}
+							{/if}
+						{/if}
+					</div>
 				{/if}
 			</div>
 
