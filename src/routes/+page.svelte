@@ -1,7 +1,4 @@
 <script lang="ts">
-	import { each } from 'svelte/internal';
-	import { objectUtil } from 'zod';
-
 	interface Suggestions {
 		task: { name: string; checked: boolean }[];
 		persona: { name: string; checked: boolean }[];
@@ -328,7 +325,7 @@
 						{/if}
 						{#if suggestions.task.length !== 0 || suggestions.persona.length !== 0 || suggestions.format.length !== 0 || suggestions.tone.length !== 0 || suggestions.exemplars.length !== 0 || suggestions.context.length !== 0}
 							<h2>Suggestions</h2>
-							<div>
+							<div class="flex flex-col items-center">
 								{#each sixBlocks as type}
 									{#if suggestions[type] !== undefined && suggestions[type].length !== 0}
 										<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b>
@@ -340,7 +337,7 @@
 													name={suggestion.name + i + ''}
 													bind:checked={suggestions[type][i].checked}
 												/>
-												<label for={suggestion.name + i + ''}>{suggestion.name}</label>
+												<label class="ml-2" for={suggestion.name + i + ''}>{suggestion.name}</label>
 											</div>
 										{/each}
 									{/if}
