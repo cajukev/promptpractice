@@ -60,14 +60,12 @@
 <script lang="ts">
 </script>
 
-<div class="container h-full mx-auto flex flex-col justify-center space-y-5 mt-5">
+<div class="container h-full mx-auto flex flex-col justify-center space-y-5">
 	<h1 class="pt-3">About the 6 Building Blocks</h1>
     <p>Inspired by this video from Jeff Su</p>
     <iframe width="560" height="315" src="https://www.youtube.com/embed/jC4v5AS4RIM?si=Vd9pLM6Jd_iy7jma" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
-    <p>I wanted a tool that would allow me to quickly iterate on these 6 components.</p>
-    <p>2 paths: ChatGPT Custom Instructions, and Web Interface</p>
-
+    <p>I wanted a tool to play around with this concept.</p>
     <h2>Custom Instructions:</h2>
     <details>
         <summary>What would you like ChatGPT to know about you to provide better responses?</summary>

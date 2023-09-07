@@ -37,6 +37,16 @@ export const POST: RequestHandler = async ({ request }) => {
             improvementsString += "\n";
         }
     });
+
+    let analysisString = "";
+    Object.keys(body.analyzedPrompt).forEach((analysis) => {
+        if ((body.analyzedPrompt as Record<string, any>)[analysis].length > 0) {
+            analysisString += `${analysis}: `;
+            analysisString += (body.analyzedPrompt as Record<string, any>)[analysis].join(", ");
+            analysisString += "\n";
+        }
+    });
+
     
     const prompt = new ChatPromptTemplate({
         promptMessages: [
@@ -49,12 +59,19 @@ Format: The visual layout or presentation or medium of the desired output. ex: e
 Tone: The tone or mood in which the response should be delivered. ex: 'use a formal and friendly tone', 'use suggestive language' Single or multiple
 Exemplars: Specific elements the user wants to include. Overview of contents.  Single or multiple
 Context: Informational Context about the task - often substring of task. Single or multiple
-Return only a new prompt that will then be used as an input.`
+Return only a new prompt that will then be used as an input.
+ex:
+Original Prompt: blah blah
+Analysis: undefined
+Suggestions: task: Write a letter of apology
+Improvements: undefined
+Revised Prompt: Write a letter of apology
+`
             ),
             HumanMessagePromptTemplate.fromTemplate(`{inputText}
 Original Prompt: ${body.prompt}
-Analysis: ${body.analyzedPrompt}
-Suggestions: ${suggestionsString}
+Analysis: ${analysisString}
+Changes: ${suggestionsString}
 Improvements: ${improvementsString}
 Revised Prompt:`),
         ],

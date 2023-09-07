@@ -11,14 +11,14 @@ import {
 import { JsonOutputFunctionsParser } from "langchain/output_parsers";
 
 const zodSchema = z.object({
-    prompt: 
+    elements: 
             z.object({
-                task: z.array(z.string().describe("Task. Empty array or suggestion")),
-                persona: z.array(z.string().describe("Persona. Empty array or suggestion")),
-                format: z.array(z.string().describe("Format. Empty array or suggestion")),
-                tone: z.array(z.string().describe("Tone. Empty array or suggestion")),
-                exemplars: z.array(z.string().describe("Exemplars. Empty array or suggestion")),
-                context: z.array(z.string().describe("Context. Empty array or suggestion")),
+                task: z.array(z.string().describe("Task. Empty array or 3 suggestions")),
+                persona: z.array(z.string().describe("Persona. Empty array or 3 suggestions")),
+                format: z.array(z.string().describe("Format. Empty array or 3 suggestions")),
+                tone: z.array(z.string().describe("Tone. Empty array or 3 suggestions")),
+                exemplars: z.array(z.string().describe("Exemplars. Empty array or 3 suggestions")),
+                context: z.array(z.string().describe("Context. Empty array or 3 suggestions")),
             })
         .describe("The 6 building blocks of the prompt"),
 });
@@ -28,9 +28,22 @@ export const POST: RequestHandler = async ({ request }) => {
     let body = await request.json();
 
     let userPrompt = body.prompt;
-    let analyzedPrompt = body.analyzedPrompt;
-    let missingBlocks = body.missingBlocks;
-    
+    let analysisString = "";
+    Object.keys(body.analyzedPrompt).forEach((analysis) => {
+        if ((body.analyzedPrompt as Record<string, any>)[analysis].length > 0) {
+            analysisString += `${analysis}: `;
+            analysisString += (body.analyzedPrompt as Record<string, any>)[analysis].join(", ");
+            analysisString += "\n";
+        }
+    });
+
+    let missingBlocksString = "";
+    Object.keys(body.missingBlocks).forEach((block) => {
+        if ((body.missingBlocks as Record<string, any>)[block]) {
+            missingBlocksString += `${block}\n`;
+        }
+    });
+
     const prompt = new ChatPromptTemplate({
         promptMessages: [
             SystemMessagePromptTemplate.fromTemplate(
@@ -43,22 +56,26 @@ Exemplars: Examples or elements or verbs to guide the response. ex: 'Use these w
 Context: Information - ex: about a topic. Single or multiple
 
 This is the user prompt, and current analysis:
-${userPrompt}
-${analyzedPrompt}
 The user wants you to suggest improvements to these building blocks:
-${missingBlocks}
 Only those that are true should be suggested.
 Suggest 3 improvements for each of these building blocks.
+Ex:
+Prompt: write an email to your boss
+Analysis:
+task: write an email to your boss
+Improvements:
+task
+task:[write an email to your boss about the new product, write an email to your boss about the new product launch, write an email to your boss about your secret project] (always 3 suggestions that build on the original prompt)
+others are empty arrays
+
 `
             ),
             HumanMessagePromptTemplate.fromTemplate(`Prompt: ${userPrompt}
+Analysis:
+${analysisString}
 Improvements: 
-${missingBlocks.task ? 'Task' : ''}
-${missingBlocks.persona ? 'Persona' : ''}
-${missingBlocks.format ? 'Format' : ''}
-${missingBlocks.tone ? 'Tone' : ''}
-${missingBlocks.context ? 'Context' : ''}
-${missingBlocks.exemplars ? 'Exemplars' : ''}`),
+${missingBlocksString}
+`),
         ],
         inputVariables: ["inputText"],
     });

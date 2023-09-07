@@ -11,7 +11,7 @@ import {
 import { JsonOutputFunctionsParser } from "langchain/output_parsers";
 
 const zodSchema = z.object({
-    prompt: 
+    elements: 
             z.object({
                 task: z.array(z.string().describe("Task. Empty array or suggestion")),
                 persona: z.array(z.string().describe("Persona. Empty array or suggestion")),
@@ -28,8 +28,22 @@ export const POST: RequestHandler = async ({ request }) => {
     let body = await request.json();
 
     let userPrompt = body.prompt;
-    let analyzedPrompt = body.analyzedPrompt;
-    let missingBlocks = body.missingBlocks;
+
+    let analysisString = "";
+    Object.keys(body.analyzedPrompt).forEach((analysis) => {
+        if ((body.analyzedPrompt as Record<string, any>)[analysis].length > 0) {
+            analysisString += `${analysis}: `;
+            analysisString += (body.analyzedPrompt as Record<string, any>)[analysis].join(", ");
+            analysisString += "\n";
+        }
+    });
+
+    let missingBlocksString = "";
+    Object.keys(body.missingBlocks).forEach((block) => {
+        if ((body.missingBlocks as Record<string, any>)[block]) {
+            missingBlocksString += `${block}\n`;
+        }
+    });
     
     const prompt = new ChatPromptTemplate({
         promptMessages: [
@@ -42,12 +56,6 @@ Tone: The tone or mood in which the response should be delivered. ex: 'use a for
 Exemplars: Examples or elements or verbs to guide the response. ex: 'Use these words...', 'Include this ...' Single or multiple
 Context: Information - ex: about a topic. Single or multiple
 
-This is the user prompt, and current analysis:
-${userPrompt}
-${analyzedPrompt}
-The user wants you to suggest these missing building blocks:
-${missingBlocks}
-Only those that are true should be suggested.
 Suggest 3 examples for each of these missing building block.
 
 E:
@@ -58,22 +66,17 @@ Context
 
 Persona: [As a soldier writing home, As a senior product marketing manager at Apple, As the king of the jungle]
 Context: [The groom is your best friend, The bride is your sister, The couple is your parents]
-(return empty for the others)
+others are empty arrays
 `
             ),
             HumanMessagePromptTemplate.fromTemplate(`Prompt: ${userPrompt}
 Suggest: 
-${missingBlocks.task ? 'Task' : ''}
-${missingBlocks.persona ? 'Persona' : ''}
-${missingBlocks.format ? 'Format' : ''}
-${missingBlocks.tone ? 'Tone' : ''}
-${missingBlocks.context ? 'Context' : ''}
-${missingBlocks.exemplars ? 'Exemplars' : ''}`),
+${missingBlocksString}`),
         ],
         inputVariables: ["inputText"],
     });
 
-    const llm = new ChatOpenAI({ openAIApiKey: import.meta.env.VITE_OPENAI_API_KEY, modelName: "gpt-4-0613", temperature: 1.0, verbose: true });
+    const llm = new ChatOpenAI({ openAIApiKey: import.meta.env.VITE_OPENAI_API_KEY, modelName: "gpt-3.5-turbo-0613", temperature: 0.5, verbose: true });
 
     // Binding "function_call" below makes the model always call the specified function.
     // If you want to allow the model to call functions selectively, omit it.

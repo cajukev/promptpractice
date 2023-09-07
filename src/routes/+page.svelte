@@ -1,11 +1,16 @@
 <script lang="ts">
+	interface Suggestion {
+		name: string;
+		checked: boolean;
+	}
+
 	interface Suggestions {
-		task: { name: string; checked: boolean }[];
-		persona: { name: string; checked: boolean }[];
-		format: { name: string; checked: boolean }[];
-		tone: { name: string; checked: boolean }[];
-		exemplars: { name: string; checked: boolean }[];
-		context: { name: string; checked: boolean }[];
+		task: Suggestion[];
+		persona: Suggestion[];
+		format: Suggestion[];
+		tone: Suggestion[];
+		exemplars: Suggestion[];
+		context: Suggestion[];
 		[key: string]: any;
 	}
 
@@ -73,18 +78,7 @@
 	let analyzePrompt = () => {
 		if (loadingAnalyze) return;
 		loadingAnalyze = true;
-		analysedPrompt = emptyPrompt;
-		analyzedInput = '';
-
-		suggestions = {
-			task: [],
-			persona: [],
-			format: [],
-			tone: [],
-			exemplars: [],
-			context: []
-		};
-		revisedPrompt = '';
+		reset();
 		console.log('Analyzing prompt...');
 		fetch('/api/AnalysePrompt', {
 			method: 'POST',
@@ -99,7 +93,7 @@
 			.then((data) => {
 				loadingAnalyze = false;
 				console.log(data);
-				analysedPrompt = data.prompt;
+				analyzedPrompt = data.prompt;
 				transformInput(data.prompt);
 			})
 			.catch((err) => {
@@ -135,7 +129,7 @@
 	};
 
 	let input = '';
-	let analysedPrompt: Prompt = {
+	let analyzedPrompt: Prompt = {
 		task: [],
 		persona: [],
 		format: [],
@@ -145,14 +139,7 @@
 	};
 
 	let loadingSuggest = false;
-	let suggestions: Suggestions = {
-		task: [],
-		persona: [],
-		format: [],
-		tone: [],
-		exemplars: [],
-		context: []
-	};
+	let suggestions: Suggestions;
 	$: console.log(suggestions);
 	let suggest = () => {
 		if (loadingSuggest) return;
@@ -165,14 +152,14 @@
 			},
 			body: JSON.stringify({
 				prompt: input,
-				analysedPrompt: analysedPrompt,
+				analyzedPrompt: analyzedPrompt,
 				missingBlocks: missingBlocks
 			})
 		})
 			.then((res) => res.json())
 			.then((data) => {
-				console.log(data.prompt);
-				let prompt: Prompt = data.prompt;
+				console.log(data.elements);
+				let prompt: Prompt = data.elements;
 				sixBlocks.forEach((type) => {
 					if (prompt[type]) {
 						prompt[type]?.forEach((block: string) => {
@@ -200,7 +187,7 @@
 			},
 			body: JSON.stringify({
 				prompt: input,
-				analysedPrompt: analysedPrompt,
+				analyzedPrompt: analyzedPrompt,
 				suggestions: suggestions,
 				improvements: improvements
 			})
@@ -229,14 +216,14 @@
 			},
 			body: JSON.stringify({
 				prompt: input,
-				analysedPrompt: analysedPrompt,
+				analyzedPrompt: analyzedPrompt,
 				missingBlocks: improvementsChecked
 			})
 		})
 			.then((res) => res.json())
 			.then((data) => {
-				console.log(data.prompt);
-				let prompt: Prompt = data.prompt;
+				console.log(data.elements);
+				let prompt: Prompt = data.elements;
 				sixBlocks.forEach((type) => {
 					if (prompt[type]) {
 						prompt[type]?.forEach((block: string) => {
@@ -254,13 +241,59 @@
 	};
 
 	let analyzedInput = '';
+
+	let promptCanBeRevised = false;
+	$: promptCanBeRevised =
+		(analyzedInput !== '' &&
+			sixBlocks.some((type) =>
+				suggestions[type].some((suggestion: Suggestion) => suggestion.checked)
+			)) ||
+		sixBlocks.some((type) =>
+			improvements[type].some((improvement: Suggestion) => improvement.checked)
+		);
+
+	let restart = () => {
+		input = revisedPrompt;
+		analyzePrompt();
+		reset();
+	};
+
+	let reset = () => {
+		analyzedPrompt = emptyPrompt;
+		analyzedInput = '';
+		missingBlocks = {
+			task: false,
+			persona: false,
+			format: false,
+			tone: false,
+			exemplars: false,
+			context: false
+		};
+		suggestions = {
+			task: [],
+			persona: [],
+			format: [],
+			tone: [],
+			exemplars: [],
+			context: []
+		};
+		improvements = {
+			task: [],
+			persona: [],
+			format: [],
+			tone: [],
+			exemplars: [],
+			context: []
+		};
+		revisedPrompt = '';
+	};
 </script>
 
 <div class="container h-full mx-auto flex justify-center items-center">
 	<div class="space-y-5 text-center flex flex-col items-center">
 		<!-- User enters prompt -> Function call -> App displays analysis -->
-		<h2>Enter a prompt:</h2>
-		<textarea bind:value={input} class="input w-72" placeholder="Enter a prompt" />
+		<h2>What would you like your assistant to do?</h2>
+		<textarea bind:value={input} class="input w-72 p-2" placeholder="Enter the prompt here" />
 		<button
 			class="btn rounded-full border"
 			on:click={() => {
@@ -283,8 +316,8 @@
 				<ul>
 					{#each sixBlocks as type}
 						<li>
-							{#if analysedPrompt[type].length !== 0}
-								<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b> - {analysedPrompt[
+							{#if analyzedPrompt[type].length !== 0}
+								<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b> - {analyzedPrompt[
 									type
 								] || 'No' + type + 'found'}
 							{/if}
@@ -293,16 +326,16 @@
 				</ul>
 			</div>
 
-			<div class="space-y-5 flex">
+			<div class="grid grid-flow-col gap-4">
 				<!-- Help sections -->
 				{#if analyzedInput !== ''}
 					<!-- Missing section -->
-					<div>
-						{#if sixBlocks.some((type) => analysedPrompt[type].length === 0)}
-							<h2>Missing</h2>
+					<div class="w-72">
+						{#if sixBlocks.some((type) => analyzedPrompt[type].length === 0)}
+							<h2 class="mb-2">Missing</h2>
 							{#each sixBlocks as type}
-								{#if analysedPrompt[type].length === 0}
-									<div class="flex flex-col items-center">
+								{#if analyzedPrompt[type].length === 0 || analyzedPrompt[type] === undefined}
+									<div class="flex flex-col items-center space-y-2">
 										<div class="flex">
 											<input
 												bind:checked={missingBlocks[type]}
@@ -316,23 +349,23 @@
 								{/if}
 							{/each}
 							<button
-								class="border btn rounded-full"
+								class="border btn rounded-full my-3"
 								on:click={() => {
 									suggest();
-								}}>suggest</button
+								}}>Suggest</button
 							>
 							{#if loadingSuggest}
-								<p>Suggesting...</p>
+								<p>Loading...</p>
 							{/if}
 							{#if suggestions.task.length !== 0 || suggestions.persona.length !== 0 || suggestions.format.length !== 0 || suggestions.tone.length !== 0 || suggestions.exemplars.length !== 0 || suggestions.context.length !== 0}
-								<h2>Suggestions</h2>
-								<div class="flex flex-col items-center">
+								<h2 class="mb-2">Suggestions</h2>
+								<div class="flex flex-col items-center space-y-2">
 									{#each sixBlocks as type}
 										{#if suggestions[type] !== undefined && suggestions[type].length !== 0}
 											<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b
 											>
 											{#each suggestions[type] as suggestion, i}
-												<div class="flex items-center">
+												<div class="flex items-center gap-2">
 													<input
 														type="checkbox"
 														id={suggestion.name + i + ''}
@@ -351,13 +384,13 @@
 						{/if}
 					</div>
 
-					<div>
+					<div class="w-72">
 						<!-- Improve section - Opposite of Missing  -->
-						{#if sixBlocks.some((type) => analysedPrompt[type].length !== 0)}
+						{#if sixBlocks.some((type) => analyzedPrompt[type].length !== 0)}
 							<h2>Improve</h2>
 							{#each sixBlocks as type}
-								{#if analysedPrompt[type].length !== 0}
-									<div class="flex flex-col items-center">
+								{#if analyzedPrompt[type].length !== 0}
+									<div class="flex flex-col items-center space-y-2">
 										<div class="flex">
 											<input
 												bind:checked={improvementsChecked[type]}
@@ -371,13 +404,13 @@
 								{/if}
 							{/each}
 							<button
-								class="border btn rounded-full"
+								class="border btn rounded-full my-3"
 								on:click={() => {
 									improve();
-								}}>improve</button
+								}}>Improve</button
 							>
 							{#if loadingImprove}
-								Loading Improvements...
+								<p>Loading...</p>
 							{/if}
 
 							{#if sixBlocks.some((type) => improvements[type].length !== 0)}
@@ -388,7 +421,7 @@
 											<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b
 											>
 											{#each improvements[type] as improvement, i}
-												<div class="flex items-center">
+												<div class="flex items-center gap-2">
 													<input
 														type="checkbox"
 														id={improvement.name + i + ''}
@@ -401,21 +434,20 @@
 										{/if}
 									{/each}
 								</div>
-
-								{#if sixBlocks.some((type) => analysedPrompt[type].length !== 0 || improvements[type].length !== 0)}
-									<button
-										class="btn border rounded-full mt-2"
-										on:click={() => {
-											revise();
-										}}>Revise Prompt</button
-									>
-								{/if}
 							{/if}
 						{/if}
 					</div>
 				{/if}
 			</div>
-
+			<!-- If one of the suggestions or improvements arrays has a checked element... using the sixBLocks array -->
+			{#if promptCanBeRevised}
+				<button
+					class="btn border rounded-full mt-2"
+					on:click={() => {
+						revise();
+					}}>Revise Prompt</button
+				>
+			{/if}
 			{#if revisedPrompt !== ''}
 				<h2>Revised Prompt</h2>
 				<h3>{revisedPrompt}</h3>
@@ -423,7 +455,7 @@
 				<button
 					class="btn border rounded-full"
 					on:click={() => {
-						input = revisedPrompt;
+						restart();
 					}}>Enter as input prompt</button
 				>
 			{/if}

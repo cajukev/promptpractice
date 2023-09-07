@@ -1,6 +1,9 @@
 # Prompt Engineering App - 6 Building Blocks
-This app helps users analyze, improve, and refine text prompts using an AI assistant. The goal is to provide targeted suggestions to strengthen weaknesses and optimize prompts for better AI responses.
 
+### https://promptpractice.vercel.app/
+
+Inspired by [this video from Jeff Su](https://www.youtube.com/embed/jC4v5AS4RIM?si=Vd9pLM6Jd_iy7jma) where he goes over the concept of "building blocks" for prompts.
+I wanted a tool to play around with this concept by analyzing prompts and suggesting improvements.
 ### Features
 - Accepts a user-entered text prompt as input
 - Analyzes the prompt and separates it into its 6 core components or "building blocks"
@@ -16,12 +19,10 @@ This app helps users analyze, improve, and refine text prompts using an AI assis
 - Select suggestions to add to the prompt
 - Click "Revise" to generate an updated prompt
 - Improvements can be further refined through multiple iterations
+### Tech Stack
+- Skeleton UI Framework (Svelte + SvelteKit + TailwindCSS)
+- Langchain & OpenAI APIs - Function Calling
+- Vercel Deployment
 ### Roadmap
-- About page
-- Expand suggestion types beyond simple blocks
-- Integrate custom models for specific domains/tasks
-- Track prompt history and A/B test performance
-- Additional analysis metrics beyond just blocks
-- Export revised prompts for use elsewhere
-- Contributing
-- Check out the project guidelines and open issues for ways to contribute. This tool is intended to help advance the field of conversational AI.
+- Fine-tune 3.5 models to generate more creative suggestions & more exact analyses.
+- Extrapolate logic to other ways of thinking about prompt structure.
