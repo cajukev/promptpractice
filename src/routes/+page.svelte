@@ -5,32 +5,32 @@
 	}
 
 	interface Suggestions {
-		task: Suggestion[];
-		persona: Suggestion[];
-		format: Suggestion[];
-		tone: Suggestion[];
-		exemplars: Suggestion[];
-		context: Suggestion[];
+		task?: Suggestion[];
+		persona?: Suggestion[];
+		format?: Suggestion[];
+		tone?: Suggestion[];
+		exemplars?: Suggestion[];
+		context?: Suggestion[];
 		[key: string]: any;
 	}
 
 	interface Prompt {
-		task: string[];
-		persona: string[];
-		format: string[];
-		tone: string[];
-		exemplars: string[];
-		context: string[];
+		task?: string[];
+		persona?: string[];
+		format?: string[];
+		tone?: string[];
+		exemplars?: string[];
+		context?: string[];
 		[key: string]: any;
 	}
 
 	interface MissingBlocks {
-		task: boolean;
-		persona: boolean;
-		format: boolean;
-		tone: boolean;
-		exemplars: boolean;
-		context: boolean;
+		task?: boolean;
+		persona?: boolean;
+		format?: boolean;
+		tone?: boolean;
+		exemplars?: boolean;
+		context?: boolean;
 		[key: string]: any;
 	}
 
@@ -93,8 +93,8 @@
 			.then((data) => {
 				loadingAnalyze = false;
 				console.log(data);
-				analyzedPrompt = data.prompt;
-				transformInput(data.prompt);
+				analyzedPrompt = data;
+				transformInput(data);
 			})
 			.catch((err) => {
 				console.log(err);
@@ -108,7 +108,7 @@
 		});
 		analyzedInput = input;
 		array.forEach((element) => {
-			element.value.forEach((value: string) => {
+			element.value?.forEach((value: string) => {
 				if (value.length !== 0 && analyzedInput.toLowerCase().includes(value.toLowerCase())) {
 					let index = getLocationOfIncludes(analyzedInput, value);
 					let length = value.length;
@@ -269,6 +269,14 @@
 			exemplars: false,
 			context: false
 		};
+		improvementsChecked = {
+			task: false,
+			persona: false,
+			format: false,
+			tone: false,
+			exemplars: false,
+			context: false
+		};
 		suggestions = {
 			task: [],
 			persona: [],
@@ -285,11 +293,67 @@
 			exemplars: [],
 			context: []
 		};
+
 		revisedPrompt = '';
+		superchargedPrompt = '';
+		superchargegoal = '';
 	};
+
+	let loadingSupercharge = false;
+	let supercharge = async () => {
+		if (loadingSupercharge) return;
+		loadingSupercharge = true;
+		// Need a string of selected suggestions and improvements
+		let selected = 'Suggestions:';
+		console.log(suggestions);
+		Object.keys(suggestions).forEach((analysis) => {
+			if ((suggestions as Record<string, any>)[analysis].length > 0) {
+				selected += `${analysis}: `;
+				selected += (suggestions as Record<string, any>)[analysis]
+					.filter((s: { checked: boolean }) => s.checked)
+					.map((s: { name: string }) => s.name)
+					.join(', ');
+				selected += '\n';
+			}
+		});
+		selected += 'Improvements:';
+		Object.keys(improvements).forEach((analysis) => {
+			if ((improvements as Record<string, any>)[analysis].length > 0) {
+				selected += `${analysis}: `;
+				selected += (improvements as Record<string, any>)[analysis]
+					.filter((s: { checked: boolean }) => s.checked)
+					.map((s: { name: string }) => s.name)
+					.join(', ');
+				selected += '\n';
+			}
+		});
+
+		fetch('/api/Supercharge', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				inputText: ( revisedPrompt !== '' ? revisedPrompt : input + '. ' + selected ),
+				superchargegoal: superchargegoal
+			})
+		})
+			.then((res) => res.json())
+			.then((data) => {
+				console.log(data);
+				loadingSupercharge = false;
+				superchargedPrompt = data;
+			})
+			.catch((err) => {
+				console.log(err);
+				loadingSupercharge = false;
+			});
+	};
+	let superchargegoal = '';
+	let superchargedPrompt = '';
 </script>
 
-<div class="container h-full mx-auto flex justify-center items-center">
+<div class="container h-full mx-auto flex justify-center items-center py-12">
 	<div class="space-y-5 text-center flex flex-col items-center">
 		<!-- User enters prompt -> Function call -> App displays analysis -->
 		<h2>What would you like your assistant to do?</h2>
@@ -316,7 +380,7 @@
 				<ul>
 					{#each sixBlocks as type}
 						<li>
-							{#if analyzedPrompt[type].length !== 0}
+							{#if analyzedPrompt[type] !== undefined}
 								<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b> - {analyzedPrompt[
 									type
 								] || 'No' + type + 'found'}
@@ -326,15 +390,15 @@
 				</ul>
 			</div>
 
-			<div class="grid grid-flow-col gap-4">
-				<!-- Help sections -->
-				{#if analyzedInput !== ''}
+			<!-- Help sections -->
+			{#if analyzedInput !== ''}
+				<div class="grid grid-flow-col gap-4">
 					<!-- Missing section -->
 					<div class="w-72">
-						{#if sixBlocks.some((type) => analyzedPrompt[type].length === 0)}
+						{#if sixBlocks.some((type) => analyzedPrompt[type] !== undefined)}
 							<h2 class="mb-2">Missing</h2>
 							{#each sixBlocks as type}
-								{#if analyzedPrompt[type].length === 0 || analyzedPrompt[type] === undefined}
+								{#if analyzedPrompt[type]?.length === 0 || analyzedPrompt[type] === undefined}
 									<div class="flex flex-col items-center space-y-2">
 										<div class="flex">
 											<input
@@ -357,11 +421,11 @@
 							{#if loadingSuggest}
 								<p>Loading...</p>
 							{/if}
-							{#if suggestions.task.length !== 0 || suggestions.persona.length !== 0 || suggestions.format.length !== 0 || suggestions.tone.length !== 0 || suggestions.exemplars.length !== 0 || suggestions.context.length !== 0}
+							{#if suggestions.task?.length !== 0 || suggestions.persona?.length !== 0 || suggestions.format?.length !== 0 || suggestions.tone?.length !== 0 || suggestions.exemplars?.length !== 0 || suggestions.context?.length !== 0}
 								<h2 class="mb-2">Suggestions</h2>
 								<div class="flex flex-col items-center space-y-2">
 									{#each sixBlocks as type}
-										{#if suggestions[type] !== undefined && suggestions[type].length !== 0}
+										{#if suggestions[type] !== undefined && suggestions[type]?.length !== 0}
 											<b><span class={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</span></b
 											>
 											{#each suggestions[type] as suggestion, i}
@@ -386,10 +450,10 @@
 
 					<div class="w-72">
 						<!-- Improve section - Opposite of Missing  -->
-						{#if sixBlocks.some((type) => analyzedPrompt[type].length !== 0)}
+						{#if sixBlocks.some((type) => analyzedPrompt[type] !== undefined)}
 							<h2>Improve</h2>
 							{#each sixBlocks as type}
-								{#if analyzedPrompt[type].length !== 0}
+								{#if analyzedPrompt[type] !== undefined}
 									<div class="flex flex-col items-center space-y-2">
 										<div class="flex">
 											<input
@@ -413,7 +477,7 @@
 								<p>Loading...</p>
 							{/if}
 
-							{#if sixBlocks.some((type) => improvements[type].length !== 0)}
+							{#if sixBlocks.some((type) => improvements[type]?.length !== 0)}
 								<h2>Improvements</h2>
 								<div>
 									{#each sixBlocks as type}
@@ -437,27 +501,49 @@
 							{/if}
 						{/if}
 					</div>
+				</div>
+				{#if promptCanBeRevised}
+					<button
+						class="btn border rounded-full mt-2"
+						on:click={() => {
+							revise();
+						}}>Revise Prompt</button
+					>
 				{/if}
-			</div>
-			<!-- If one of the suggestions or improvements arrays has a checked element... using the sixBLocks array -->
-			{#if promptCanBeRevised}
-				<button
-					class="btn border rounded-full mt-2"
-					on:click={() => {
-						revise();
-					}}>Revise Prompt</button
-				>
-			{/if}
-			{#if revisedPrompt !== ''}
-				<h2>Revised Prompt</h2>
-				<h3>{revisedPrompt}</h3>
-				<!-- button: enter as input prompt -->
+				{#if revisedPrompt !== ''}
+					<h2>Revised Prompt</h2>
+					<h3>{revisedPrompt}</h3>
+					<!-- button: enter as input prompt -->
+					<button
+						class="btn border rounded-full"
+						on:click={() => {
+							restart();
+						}}>Enter as input prompt</button
+					>
+				{/if}
+				<!-- Supercharge -->
+				<input
+					class="input max-w-prose p-2"
+					type="text"
+					name="improveType"
+					id="improveType"
+					bind:value={superchargegoal}
+					placeholder="Supercharge Goal"
+				/>
 				<button
 					class="btn border rounded-full"
 					on:click={() => {
-						restart();
-					}}>Enter as input prompt</button
-				>
+						supercharge();
+					}}
+					>Supercharge
+				</button>
+				{#if loadingSupercharge}
+					<p>Loading...</p>
+				{/if}
+				{#if superchargedPrompt !== ''}
+					<h2>Supercharged Prompt</h2>
+					<h3 class="max-w-prose">{superchargedPrompt}</h3>
+				{/if}
 			{/if}
 		{/if}
 	</div>

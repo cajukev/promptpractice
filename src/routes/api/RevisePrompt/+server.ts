@@ -1,6 +1,6 @@
 import type { RequestHandler } from "@sveltejs/kit";
 import { ChatOpenAI } from "langchain/chat_models/openai";
-import { LLMChain } from "langchain";
+import { LLMChain } from "langchain/chains";
 import {
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
